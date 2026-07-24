@@ -1,3 +1,3 @@
-idf_component_register(SRCS "uart_echo_example_main.c"
-                    REQUIRES esp_driver_uart esp_driver_gpio
+idf_component_register(SRCS "main.c"
+                    REQUIRES esp_driver_spi
                     INCLUDE_DIRS ".")
