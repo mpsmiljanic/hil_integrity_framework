@@ -19,4 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run tests by default
-CMD ["pytest"]
+# CMD ["pytest"]
+
+# Run tests
+CMD ["pytest", "-s", "tests/pytest_spi_integrity.py"]
