@@ -1,0 +1,29 @@
+name: ADI HIL SPI Integrity Pipeline
+
+# Pipeline se pokreće automatski na svaki push ili pull request na master granu
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  hil-integrity-test:
+    # KLJUČNA STAVKA: Koristi oznaku 'self-hosted' koju si uneo pri setup-u runnera
+    runs-on: self-hosted
+    
+    steps:
+      # 1. Povlačenje koda sa GitHub-a na tvoj Raspberry Pi
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Build Docker slike (koristi keširanje koje smo podesili u Dockerfile-u)
+      - name: Build Docker Image
+        run: docker build -t adi-hil-framework .
+
+      # 3. Pokretanje testa sa privilegovanim pristupom SPI hardveru
+      - name: Run HIL SPI Test
+        run: |
+          docker run --privileged \
+          --device /dev/spidev0.0:/dev/spidev0.0 \
+          adi-hil-framework
