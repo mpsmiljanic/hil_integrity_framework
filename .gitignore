@@ -5,3 +5,10 @@ __pycache__/
 .venv/
 sdkconfig.old
 *.log
+
+# Sphinx build outputs
+docs/_build/
+docs/.doctrees/
+
+# Audio temporary files
+/tmp/
