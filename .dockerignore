@@ -3,7 +3,9 @@ __pycache__/
 .pytest_cache/
 *.pyc
 build/
+firmware/build/
 docs/_build/
 docs/build/
 .git/
 *.log
+reports/

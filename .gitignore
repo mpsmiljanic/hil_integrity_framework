@@ -12,3 +12,5 @@ docs/.doctrees/
 
 # Audio temporary files
 /tmp/
+
+reports/

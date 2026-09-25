@@ -51,6 +51,7 @@ pytest-embedded-idf==2.7.0
 pytest-embedded-qemu==2.7.0
 pytest-embedded-serial==2.7.0
 pytest-embedded-serial-esp==2.7.0
+pytest-html>=4.1.0
 python-dotenv==1.2.2
 python-gitlab==8.3.0
 PyYAML==6.0.3
