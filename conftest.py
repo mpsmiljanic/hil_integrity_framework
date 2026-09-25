@@ -4,6 +4,22 @@ import spidev
 import serial
 
 
+class MockSerial:
+    """Dummy mock object used ONLY when --allow-mock is explicitly provided."""
+    def write(self, data):
+        pass
+    def read(self, size=1):
+        return b""
+    def readline(self):
+        return b""
+    def reset_input_buffer(self):
+        pass
+    def reset_output_buffer(self):
+        pass
+    def close(self):
+        pass
+
+
 def pytest_addoption(parser):
     """
     Register custom CLI options for HIL testing.
@@ -14,11 +30,15 @@ def pytest_addoption(parser):
         ("--baud", "115200", "UART baud rate (default: 115200)"),
         ("--spi-bus", "0", "Raspberry Pi SPI bus index (default: 0)"),
         ("--spi-device", "0", "Raspberry Pi SPI Chip Select / Device index (default: 0 for CE0)"),
+        ("--allow-mock", False, "Explicitly allow fallback to Mock DUT if physical serial port fails"),
     ]
 
     for opt, default_val, help_text in options:
         try:
-            parser.addoption(opt, action="store", default=default_val, help=help_text)
+            if isinstance(default_val, bool):
+                parser.addoption(opt, action="store_true", default=default_val, help=help_text)
+            else:
+                parser.addoption(opt, action="store", default=default_val, help=help_text)
         except (ValueError, argparse.ArgumentError):
             # Option already registered by pytest-embedded or another plugin
             pass
@@ -46,19 +66,36 @@ def uart_baud(request):
     return int(val) if val is not None else 115200
 
 
+@pytest.fixture(scope="session")
+def allow_mock(request):
+    """Check if mock mode is explicitly allowed via CLI."""
+    try:
+        return request.config.getoption("--allow-mock")
+    except (ValueError, AttributeError):
+        return False
+
+
 @pytest.fixture(scope="function")
-def serial_connection(uart_port, uart_baud):
+def serial_connection(request, uart_port, uart_baud, allow_mock):
     """
     Provide an active serial connection to the Device Under Test (DUT).
-    Automatically closes the port after test execution.
+    Fails the test immediately if the physical port cannot be opened,
+    unless '--allow-mock' flag is explicitly passed.
     """
-    ser = serial.Serial(uart_port, uart_baud, timeout=2.0)
-    ser.reset_input_buffer()
-    ser.reset_output_buffer()
-    
-    yield ser
-    
-    ser.close()
+    try:
+        ser = serial.Serial(uart_port, uart_baud, timeout=2.0)
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
+        yield ser
+        ser.close()
+    except (serial.SerialException, OSError) as e:
+        if allow_mock:
+            yield MockSerial()
+        else:
+            pytest.fail(
+                f"CRITICAL HIL HARDWARE FAILURE: Unable to open UART port '{uart_port}'. "
+                f"Reason: {e}. Check hardware connections or run with '--allow-mock' for dry-runs."
+            )
 
 
 # --- SPI Fixtures ---
