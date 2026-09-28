@@ -1,29 +1,44 @@
-name: ADI HIL SPI Integrity Pipeline
+name: HIL Hardware Validation Pipeline
 
-# Pipeline se pokreće automatski na svaki push ili pull request na master granu
 on:
   push:
-    branches: [ master, main ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ "main", "master" ]
 
 jobs:
-  hil-integrity-test:
-    # KLJUČNA STAVKA: Koristi oznaku 'self-hosted' koju si uneo pri setup-u runnera
+  hil-hardware-tests:
+    name: Execute HIL Tests on Raspberry Pi Hardware
     runs-on: self-hosted
-    
+
     steps:
-      # 1. Povlačenje koda sa GitHub-a na tvoj Raspberry Pi
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Build Docker slike (koristi keširanje koje smo podesili u Dockerfile-u)
-      - name: Build Docker Image
-        run: docker build -t adi-hil-framework .
-
-      # 3. Pokretanje testa sa privilegovanim pristupom SPI hardveru
-      - name: Run HIL SPI Test
+      - name: Build HIL Docker Image
         run: |
-          docker run --privileged \
-          --device /dev/spidev0.0:/dev/spidev0.0 \
-          adi-hil-framework
+          docker build -t hil-tester:latest .
+
+      - name: Run Automated HIL Tests in Docker Container
+        run: |
+          mkdir -p reports
+          docker run --rm \
+            --device=/dev/ttyS0:/dev/ttyS0 \
+            --device=/dev/spidev0.0:/dev/spidev0.0 \
+            --device=/dev/snd:/dev/snd \
+            -v $(pwd)/reports:/app/reports \
+            hil-tester:latest
+
+      - name: Fix Report File Permissions
+        if: always()
+        run: |
+          sudo chmod -R 777 reports || true
+
+      - name: Publish Test Report Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hil-test-execution-reports
+          path: |
+            reports/report.html
+            reports/junit.xml
