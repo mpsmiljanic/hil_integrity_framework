@@ -9,3 +9,4 @@ docs/build/
 .git/
 *.log
 reports/
+actions-runner/
